@@ -54,7 +54,7 @@ for i=1:step
     real_velocity = velocity + velocity/100*randn();
     real_x = real_x + real_velocity*sample_time*cos(real_theta); % m
     real_y = real_y + real_velocity*sample_time*sin(real_theta); % m
-    real_theta = real_theta + real_velocity/length*tan(heading)*sample_time; % rad
+    real_theta = real_theta;% + real_velocity/length*tan(heading)*sample_time; % rad
 
    %% gps
     gps_x = real_x + rand_gps_x/3*randn();
