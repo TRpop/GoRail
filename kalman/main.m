@@ -13,7 +13,7 @@ rand_gps_z = sqrt(gps_s(3,3));
 
 %% Car model
 
-wheel_radius = 0.1;
+wheel_radius = 0.07;
 length = 1;
 
 velocity = 10; % m/s
@@ -21,8 +21,8 @@ heading = 0;
 
 %% kalman set
 
-H = [1 0 0; 0 1 0];
-Q = [0.01 0 0;0 0.01 0; 0 0 0.00001];
+H = [1 0 0 0; 0 1 0 0; 0 0 0 1];
+Q = [1 0 0;0 1 0; 0 0 0.00001];
 R = [rand_gps_x 0;0 rand_gps_y];
 
 P = 1*eye(3);
@@ -34,6 +34,7 @@ test_time = 10;
 step = test_time/sample_time;
 
 save_real = zeros(step,3);
+save_dist = zeros(step,3);
 save_gps = zeros(step,3);
 save_kal = zeros(step,3);
 
@@ -61,16 +62,6 @@ for i=1:step
     gps_xyz = [gps_x gps_y gps_z]';
     gps_xy = [gps_x gps_y]';
     
-%    %% steroe
-%     [st_u, st_s, st_cx, st_cy, ct_cz, st_x, st_y, st_z] = sj_stereo(real_x,real_y,real_z);
-%     st_xyz = [st_x st_y st_z]';
-%     
-%    %% geometry sensor fusion
-%     gps_w = inv(inv(gps_u*gps_s*gps_u')+inv(st_u*st_s*st_u'))*inv(gps_u*gps_s*gps_u');
-%     st_w = inv(inv(gps_u*gps_s*gps_u')+inv(st_u*st_s*st_u'))*inv(st_u*st_s*st_u');
-%     
-%     sf_xyz = gps_w*gps_xyz + st_w*st_xyz;
-    
    %% kalman filter
     pre_kal_theta = kal_theta;
     
@@ -89,17 +80,18 @@ for i=1:step
     
    %% data save
     save_real(i,:) = [real_x real_y real_z];
+    save_dist(i, 1) = sqrt(real_x^2 + real_y^2);
+    save_dist(i, 2) = sqrt(gps_xyz(1)^2 + gps_xyz(2)^2);
+    save_dist(i, 3) = sqrt(x_kal(1)^2 + x_kal(2)^2);
     save_gps(i,:) = gps_xyz';
     save_kal(i,:) = x_kal;
 end
-
-% error_gps = zeros(step,3);
-% error_st = zeros(step,3);
-% error_sf = zeros(step,3);
-% error_kal = zeros(step,3);
-
+%%
 error_gps = abs(save_real-save_gps);
 error_kal = abs(save_real-save_kal);
+
+error_gps_dist = abs(save_dist(:, 1)-save_dist(:, 2));
+error_kal_dist = abs(save_dist(:, 1)-save_dist(:, 3));
 
 plot_x = 1:step;
 
@@ -148,99 +140,26 @@ legend('real', 'gps', 'kalman')
 grid on
 hold off
 
+figure(5)
+plot(plot_x, save_dist(:, 1))
+hold on
+plot(plot_x, save_dist(:, 2), '.')
+plot(plot_x, save_dist(:, 3))
+title('Distance')
+xlabel('step')
+ylabel('distance(m)')
+legend('real', 'gps', 'kalman')
+grid on
+hold off
 
-% 
-% 
+figure(6)
+plot(plot_x, error_gps_dist)
+hold on
+plot(plot_x, error_kal_dist)
+title('Error of Distance')
+xlabel('step')
+ylabel('distance(m)')
+legend('gps', 'kal')
+grid on
+hold off
 
-% % figure(2)
-% % plot3(save_real(:,1),save_real(:,2),save_real(:,3),'b')
-% % hold on
-% % plot3(save_gps(:,1),save_gps(:,2),save_gps(:,3),'.m')
-% % plot3(save_st(:,1),save_st(:,2),save_st(:,3),'k')
-% % plot3(save_sf(:,1),save_sf(:,2),save_sf(:,3),'r')
-% % title('Trajectory')
-% % xlabel('distance x(m)')
-% % ylabel('distance y(m)')
-% % zlabel('distance z(m)')
-% % legend('real','gps','st','fusion')
-% % grid on
-% 
-% figure(2)
-% plot(save_real(:,1),save_real(:,2),'b')
-% hold on
-% plot(save_gps(:,1),save_gps(:,2),'.m')
-% plot(save_st(:,1),save_st(:,2),'k')
-% %plot(save_sf(:,1),save_sf(:,2),'r')
-% plot(save_kal(:,1),save_kal(:,2),'g')
-% title('Trajectory')
-% xlabel('distance x(m)')
-% ylabel('distance y(m)')
-% legend('real','gps','st','kalman')
-% grid on
-% 
-% figure(3)
-% plot(plot_x/10,save_real(:,1),'b');
-% hold on
-% plot(plot_x/10,save_gps(:,1),'m');
-% plot(plot_x/10,save_st(:,1),'k');
-% plot(plot_x/10,save_sf(:,1),'r');
-% plot(plot_x/10,save_kal(:,1),'g');
-% title('distance x')
-% xlabel('time(s)')
-% ylabel('distance x(m)')
-% legend('real','gps','st','fusion','kalman')
-% 
-% figure(4)
-% plot(plot_x/10,save_real(:,2),'b');
-% hold on
-% plot(plot_x/10,save_gps(:,2),'m');
-% plot(plot_x/10,save_st(:,2),'k');
-% plot(plot_x/10,save_sf(:,2),'r');
-% plot(plot_x/10,save_kal(:,2),'g');
-% title('distance y')
-% xlabel('time(s)')
-% ylabel('distance y(m)')
-% legend('real','gps','st','fusion','kalman')
-% 
-% % figure(5)
-% % plot(plot_x/10,save_real(:,3),'b');
-% % hold on
-% % plot(plot_x/10,save_gps(:,3),'m');
-% % plot(plot_x/10,save_st(:,3),'k');
-% % plot(plot_x/10,save_sf(:,3),'r');
-% % title('distance z')
-% % xlabel('time(s)')
-% % ylabel('distance z(m)')
-% % legend('real','gps','st','fusion')
-% 
-% figure(6)
-% plot(plot_x/10,abs(save_real(:,1)-save_gps(:,1)),'m');
-% hold on
-% plot(plot_x/10,abs(save_real(:,1)-save_st(:,1)),'k');
-% plot(plot_x/10,abs(save_real(:,1)-save_sf(:,1)),'r');
-% plot(plot_x/10,abs(save_real(:,1)-save_kal(:,1)),'g');
-% title('error x')
-% xlabel('time(s)')
-% ylabel('error x(m)')
-% legend('gps','st','fusion','kalman')
-% 
-% figure(7)
-% plot(plot_x/10,abs(save_real(:,2)-save_gps(:,2)),'m');
-% hold on
-% plot(plot_x/10,abs(save_real(:,2)-save_st(:,2)),'k');
-% %plot(plot_x/10,abs(save_real(:,2)-save_sf(:,2)),'r');
-% plot(plot_x/10,abs(save_real(:,2)-save_kal(:,2)),'g');
-% title('error y')
-% xlabel('time(s)')
-% ylabel('error y(m)')
-% legend('gps','st','kalman')
-% 
-% % figure(8)
-% % plot(plot_x/10,abs(save_real(:,3)-save_gps(:,3)),'m');
-% % hold on
-% % plot(plot_x/10,abs(save_real(:,3)-save_st(:,3)),'k');
-% % plot(plot_x/10,abs(save_real(:,3)-save_sf(:,3)),'r');
-% % title('error z')
-% % xlabel('time(s)')
-% % ylabel('error z(m)')
-% % legend('gps','st','fusion')
